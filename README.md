@@ -38,6 +38,9 @@ python -m eolscan.cli path --dir <folder> [--near-months 6] [--out file.json] [-
 - **“SBOM unavailable …”** → Enable **Dependency graph** in repo settings or use fallback/local scan.  
 - **401/403** → Use a PAT with **Contents: Read** + **Dependency graph: Read**.  
 - **Empty/Unknown results** → No detectable hints; scan local clone.
+<<<<<<< HEAD
 
 ## Automation
 Use the included GitHub Actions workflow to run nightly and upload `eol-report.json`.
+=======
+>>>>>>> 2b07053 (docs: add technical document)
