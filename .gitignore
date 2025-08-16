@@ -1,2 +1,4 @@
 .venv
 report.json
+eol-report.json
+sbom.spdx.json

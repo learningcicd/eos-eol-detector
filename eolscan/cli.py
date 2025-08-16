@@ -5,10 +5,21 @@ from tabulate import tabulate
 from .parsers import find_python_version, find_node_version, find_os_from_docker
 from .eol_data import EOL_SLUGS, assess
 from .pypi_npm import pypi_last_release, npm_last_release, stale_status
-from .sbom import fetch_github_sbom
+from .sbom import fetch_github_sbom, parse_local_sbom, runtime_hits
+from .eol_data import EOL_SLUGS, assess
 
-def scan_path(path: Path, near_months: int = 6):
+def assess_from_components(components, near_months):
+    out = []
+    for hit in runtime_hits(components):
+        out.append(assess(hit["slug"], hit["name"], hit["version"], near_months))
+    return out
+
+def scan_path(path: Path, near_months=6, sbom_path: str | None = None):
     results = []
+    if sbom_path:
+        comps = parse_local_sbom(sbom_path)
+        results.extend(assess_from_components(comps, near_months))
+        return results
 
     py_ver = find_python_version(path)
     if py_ver:
@@ -96,7 +107,7 @@ def scan_repo(owner_repo: str, ref: str | None = None, token: str | None = None,
     try:
         root = _download_repo_to_temp(owner_repo, ref, token)
         out = scan_path(root, near_months=near_months)
-        out.insert(0, {"type":"note","message":"SBOM unavailable; used zipball fallback."})
+        # out.insert(0, {"type":"note","message":"SBOM unavailable; used zipball fallback."})
         return out
     except requests.HTTPError as e:
         msg = ""
@@ -114,12 +125,14 @@ def main():
 
     p1 = sub.add_parser("path", help="Scan a local directory")
     p1.add_argument("--dir", required=True)
+    p1.add_argument("--sbom", default=None, help="Path to a local SBOM (SPDX/CycloneDX JSON)")
     p1.add_argument("--near-months", type=int, default=6)
     p1.add_argument("--out")
     p1.add_argument("--table", action="store_true")
 
     p2 = sub.add_parser("repo", help="Scan a GitHub repo (SBOM, then zip fallback)")
     p2.add_argument("--repo", required=True)
+    p2.add_argument("--sbom", default=None, help="Path to a local SBOM (SPDX/CycloneDX JSON)")
     p2.add_argument("--ref", default=None)
     p2.add_argument("--token", default=os.getenv("GITHUB_TOKEN"))
     p2.add_argument("--near-months", type=int, default=6)
@@ -128,9 +141,13 @@ def main():
 
     args = ap.parse_args()
     if args.cmd == "path":
-        res = scan_path(Path(args.dir), near_months=args.near_months)
+        res = scan_path(Path(args.dir), near_months=args.near_months, sbom_path=args.sbom)
     elif args.cmd == "repo":
-        res = scan_repo(args.repo, args.ref, args.token, near_months=args.near_months)
+        if args.sbom:
+            comps = parse_local_sbom(args.sbom)
+            res = assess_from_components(comps, args.near_months)
+        else:
+            res = scan_repo(args.repo, args.ref, args.token, near_months=args.near_months)
     else:
         ap.print_help(); sys.exit(1)
 
