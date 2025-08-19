@@ -11,8 +11,11 @@ curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
 which syft
 syft version
 
-# generate an SPDX JSON SBOM in the current repo
-syft dir:. -o spdx-json > sbom.spdx.json
+# create reports directory if it doesn't exist
+mkdir -p reports
+
+# generate an SPDX JSON SBOM in the reports folder
+syft dir:. -o spdx-json > reports/sbom.spdx.json
 
 # confirm the file exists
-ls -lh sbom.spdx.json
+ls -lh reports/sbom.spdx.json
